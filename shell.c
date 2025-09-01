@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -49,6 +50,20 @@ command *command_parse(char *cmd_str) {
   return cmd;
 }
 
+int change_dir(command *cmd) {
+  char *dir = cmd->args[1];
+  if (!dir) {
+    dir = getenv("HOME");
+  }
+
+  if (chdir(dir) == 0) {
+    return 0;
+  }
+
+  fprintf(stderr, "%s: %s\n", dir, strerror(errno));
+  return 1;
+}
+
 void shell_loop(void) {
   char *line;
   int exit_code = 0;
@@ -63,11 +78,21 @@ void shell_loop(void) {
       break;
     }
 
-    command *cmd = command_parse(line);
-    printf("mysh: command not found: %s\n", cmd->cmd);
-
     if (line)
       add_history(line);
+
+    command *cmd = command_parse(line);
+
+    if (strcmp(cmd->cmd, "cd") == 0) {
+      free(line);
+      change_dir(cmd);
+      continue;
+    } else if (strcmp(cmd->cmd, "exit") == 0) {
+      free(line);
+      break;
+    } else {
+      printf("mysh: command not found: %s\n", cmd->cmd);
+    }
 
     free(line);
   }
