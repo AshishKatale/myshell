@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "command.h"
@@ -57,11 +58,39 @@ int change_dir(command *cmd) {
   return 1;
 }
 
+pid_t command_fork_and_exec(command *c) {
+  int pid = fork();
+  if (pid == -1) {
+    perror("shell fork failed");
+    exit(1);
+  }
+
+  if (pid == 0) {
+    // Child process
+    execvp(c->cmd, c->args);
+
+    // Only reached if execvp fails
+    if (errno == ENOENT) {
+      fprintf(stderr, "mysh: command not found: %s\n", c->cmd);
+    } else if (errno == EACCES) {
+      fprintf(stderr, "mysh: permission denied: %s\n", c->cmd);
+    } else {
+      fprintf(stderr, "mysh: %s: %s\n", c->cmd, strerror(errno));
+    }
+
+    _exit(127);
+  }
+
+  return pid;
+}
+
 int command_exec(command *cmd) {
   if (strcmp(cmd->cmd, "cd") == 0) {
     return change_dir(cmd);
   } else {
-    printf("mysh: command not found: %s\n", cmd->cmd);
+    int pstatus;
+    pid_t pid = command_fork_and_exec(cmd);
+    waitpid(pid, &pstatus, 0);
   }
 
   return 0;
