@@ -164,7 +164,27 @@ int command_str_parse_and_exec(char *cmd_str) {
       }
     }
   } else {
-    command_pipeline_print(cmd_pipeline);
+    int fd[2];
+    if (pipe(fd) == -1) {
+      perror("pipe");
+      exit(1);
+    }
+    // set stdout to pipe for cmd1
+    pid_t pid1 =
+        command_fork_and_exec(cmd_pipeline.cmds[0], STDIN_FILENO, fd[1], fd[0]);
+    close(fd[1]);
+
+    // set stdin to pipe for cmd2
+    pid_t pid2 = command_fork_and_exec(cmd_pipeline.cmds[1], fd[0],
+                                       STDOUT_FILENO, fd[1]);
+    close(fd[0]);
+
+    int pstatus;
+    waitpid(pid1, &pstatus, 0);
+    waitpid(pid2, &pstatus, 0);
+
+    free(cmd_pipeline.cmds[1]->args);
+    free(cmd_pipeline.cmds[1]);
   }
 
   return 0;
