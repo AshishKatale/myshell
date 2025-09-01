@@ -7,16 +7,35 @@
 
 #include "command.h"
 
-command *command_parse(char *cmd_str) {
+void command_print(command *c) {
+  if (!c)
+    return;
+
+  printf("Command: [%d]{ ", c->nagrs);
+  for (int i = 0; i < c->nagrs; ++i) {
+    printf("%s, ", c->args[i]);
+  }
+  printf("} ");
+}
+
+void command_pipeline_print(cmd_pipeline c) {
+  printf("ncmd: %d\n", c.ncmds);
+  for (int i = 0; i < c.ncmds; ++i) {
+    command_print(c.cmds[i]);
+  }
+  printf("\n");
+}
+
+command *command_parse(char *cmd_str, char **save_ptr) {
   command *cmd = malloc(sizeof(command));
 
   int nagrs = 0, args_cap = 4;
   char **args = malloc(args_cap * sizeof(char *));
 
   char *delim = " \t\r\n";
-  char *token = strtok(cmd_str, delim);
+  char *cmd_token = strtok_r(cmd_str, delim, save_ptr);
 
-  if (!token) {
+  if (!cmd_token) {
     cmd->cmd = NULL;
     cmd->args = NULL;
     cmd->nagrs = 0;
@@ -24,16 +43,16 @@ command *command_parse(char *cmd_str) {
     return cmd;
   }
 
-  cmd->cmd = token;      // command name
-  args[nagrs++] = token; // reuse command name as argv[0]
+  cmd->cmd = cmd_token;      // command name
+  args[nagrs++] = cmd_token; // reuse command name as argv[0]
 
-  while (token != NULL) {
-    token = strtok(NULL, delim);
+  while (cmd_token != NULL) {
+    cmd_token = strtok_r(NULL, delim, save_ptr);
     if (nagrs >= args_cap) {
       args_cap += 4;
       args = realloc(args, args_cap * sizeof(char *));
     }
-    args[nagrs++] = token;
+    args[nagrs++] = cmd_token;
   }
   args[nagrs] = NULL;
 
@@ -42,6 +61,32 @@ command *command_parse(char *cmd_str) {
   cmd->args = args;
 
   return cmd;
+}
+
+cmd_pipeline command_pipeline_parse(char *cmd_str) {
+  cmd_pipeline pipe;
+  pipe.ncmds = 0;
+  pipe.cmds = NULL;
+
+  char *delim = "|";
+  char *save_pipe = NULL, *save_cmd = NULL;
+  char *cmd_str_token = strtok_r(cmd_str, delim, &save_pipe);
+  if (!cmd_str_token) {
+    return pipe;
+  }
+
+  int ncmds_cap = 3;
+  pipe.cmds = malloc(ncmds_cap * sizeof(command *));
+  while (cmd_str_token != NULL) {
+    pipe.cmds[pipe.ncmds++] = command_parse(cmd_str_token, &save_cmd);
+    if (pipe.ncmds >= ncmds_cap) {
+      ncmds_cap += 3;
+      pipe.cmds = realloc(pipe.cmds, ncmds_cap * sizeof(command *));
+    }
+    cmd_str_token = strtok_r(NULL, delim, &save_pipe);
+  }
+
+  return pipe;
 }
 
 int change_dir(command *cmd) {
@@ -58,7 +103,7 @@ int change_dir(command *cmd) {
   return 1;
 }
 
-pid_t command_fork_and_exec(command *c) {
+pid_t command_fork_and_exec(command *c, int fdin, int fdout, int fd_to_close) {
   int pid = fork();
   if (pid == -1) {
     perror("shell fork failed");
@@ -67,6 +112,17 @@ pid_t command_fork_and_exec(command *c) {
 
   if (pid == 0) {
     // Child process
+    if (fdin != STDIN_FILENO) {
+      dup2(fdin, STDIN_FILENO);
+      close(fdin);
+    }
+    if (fdout != STDOUT_FILENO) {
+      dup2(fdout, STDOUT_FILENO);
+      close(fdout);
+    }
+    if (fd_to_close != -1)
+      close(fd_to_close);
+
     execvp(c->cmd, c->args);
 
     // Only reached if execvp fails
@@ -84,13 +140,31 @@ pid_t command_fork_and_exec(command *c) {
   return pid;
 }
 
-int command_exec(command *cmd) {
-  if (strcmp(cmd->cmd, "cd") == 0) {
-    return change_dir(cmd);
+int command_str_parse_and_exec(char *cmd_str) {
+  cmd_pipeline cmd_pipeline = command_pipeline_parse(cmd_str);
+  int is_pipeline = cmd_pipeline.ncmds > 1;
+
+  if (cmd_pipeline.ncmds == 0) {
+    return 0;
+  }
+
+  if (!is_pipeline) {
+    command *cmd = cmd_pipeline.cmds[0];
+    if (strcmp(cmd->cmd, "exit") == 0) {
+      return -1;
+    } else if (strcmp(cmd->cmd, "cd") == 0) {
+      return change_dir(cmd);
+    } else {
+      int pstatus;
+      pid_t pid = command_fork_and_exec(cmd, STDIN_FILENO, STDOUT_FILENO, -1);
+      waitpid(pid, &pstatus, 0);
+
+      if (WIFEXITED(pstatus)) {
+        return WEXITSTATUS(pstatus);
+      }
+    }
   } else {
-    int pstatus;
-    pid_t pid = command_fork_and_exec(cmd);
-    waitpid(pid, &pstatus, 0);
+    command_pipeline_print(cmd_pipeline);
   }
 
   return 0;

@@ -24,14 +24,9 @@ void shell_loop(void) {
     if (line)
       add_history(line);
 
-    command *cmd = command_parse(line);
-
-    if (strcmp(cmd->cmd, "exit") == 0) {
-      free(line);
+    exit_code = command_str_parse_and_exec(line);
+    if (exit_code < 0)
       break;
-    } else {
-      command_exec(cmd);
-    }
 
     free(line);
   }
