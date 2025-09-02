@@ -18,16 +18,8 @@ void command_print(command *c) {
   printf("} ");
 }
 
-void command_pipeline_print(cmd_pipeline c) {
-  printf("ncmd: %d\n", c.ncmds);
-  for (int i = 0; i < c.ncmds; ++i) {
-    command_print(c.cmds[i]);
-  }
-  printf("\n");
-}
-
-command *command_parse(char *cmd_str, char **save_ptr) {
-  command *cmd = malloc(sizeof(command));
+command command_parse(char *cmd_str, char **save_ptr) {
+  command cmd;
 
   int nagrs = 0, args_cap = 4;
   char **args = malloc(args_cap * sizeof(char *));
@@ -36,14 +28,13 @@ command *command_parse(char *cmd_str, char **save_ptr) {
   char *cmd_token = strtok_r(cmd_str, delim, save_ptr);
 
   if (!cmd_token) {
-    cmd->cmd = NULL;
-    cmd->args = NULL;
-    cmd->nagrs = 0;
-    cmd->args_cap = args_cap;
+    cmd.cmd = NULL;
+    cmd.args = NULL;
+    cmd.nagrs = 0;
     return cmd;
   }
 
-  cmd->cmd = cmd_token;      // command name
+  cmd.cmd = cmd_token;       // command name
   args[nagrs++] = cmd_token; // reuse command name as argv[0]
 
   while (cmd_token != NULL) {
@@ -54,39 +45,10 @@ command *command_parse(char *cmd_str, char **save_ptr) {
     }
     args[nagrs++] = cmd_token;
   }
-  args[nagrs] = NULL;
 
-  cmd->nagrs = nagrs;
-  cmd->args_cap = args_cap;
-  cmd->args = args;
-
+  cmd.nagrs = nagrs;
+  cmd.args = args;
   return cmd;
-}
-
-cmd_pipeline command_pipeline_parse(char *cmd_str) {
-  cmd_pipeline pipe;
-  pipe.ncmds = 0;
-  pipe.cmds = NULL;
-
-  char *delim = "|";
-  char *save_pipe = NULL, *save_cmd = NULL;
-  char *cmd_str_token = strtok_r(cmd_str, delim, &save_pipe);
-  if (!cmd_str_token) {
-    return pipe;
-  }
-
-  int ncmds_cap = 3;
-  pipe.cmds = malloc(ncmds_cap * sizeof(command *));
-  while (cmd_str_token != NULL) {
-    pipe.cmds[pipe.ncmds++] = command_parse(cmd_str_token, &save_cmd);
-    if (pipe.ncmds >= ncmds_cap) {
-      ncmds_cap += 3;
-      pipe.cmds = realloc(pipe.cmds, ncmds_cap * sizeof(command *));
-    }
-    cmd_str_token = strtok_r(NULL, delim, &save_pipe);
-  }
-
-  return pipe;
 }
 
 int change_dir(command *cmd) {
@@ -106,7 +68,7 @@ int change_dir(command *cmd) {
 pid_t command_fork_and_exec(command *c, int fdin, int fdout, int fd_to_close) {
   int pid = fork();
   if (pid == -1) {
-    perror("shell fork failed");
+    perror("mysh: fork failed");
     exit(1);
   }
 
@@ -138,54 +100,4 @@ pid_t command_fork_and_exec(command *c, int fdin, int fdout, int fd_to_close) {
   }
 
   return pid;
-}
-
-int command_str_parse_and_exec(char *cmd_str) {
-  cmd_pipeline cmd_pipeline = command_pipeline_parse(cmd_str);
-  int is_pipeline = cmd_pipeline.ncmds > 1;
-
-  if (cmd_pipeline.ncmds == 0) {
-    return 0;
-  }
-
-  if (!is_pipeline) {
-    command *cmd = cmd_pipeline.cmds[0];
-    if (strcmp(cmd->cmd, "exit") == 0) {
-      return -1;
-    } else if (strcmp(cmd->cmd, "cd") == 0) {
-      return change_dir(cmd);
-    } else {
-      int pstatus;
-      pid_t pid = command_fork_and_exec(cmd, STDIN_FILENO, STDOUT_FILENO, -1);
-      waitpid(pid, &pstatus, 0);
-
-      if (WIFEXITED(pstatus)) {
-        return WEXITSTATUS(pstatus);
-      }
-    }
-  } else {
-    int fd[2];
-    if (pipe(fd) == -1) {
-      perror("pipe");
-      exit(1);
-    }
-    // set stdout to pipe for cmd1
-    pid_t pid1 =
-        command_fork_and_exec(cmd_pipeline.cmds[0], STDIN_FILENO, fd[1], fd[0]);
-    close(fd[1]);
-
-    // set stdin to pipe for cmd2
-    pid_t pid2 = command_fork_and_exec(cmd_pipeline.cmds[1], fd[0],
-                                       STDOUT_FILENO, fd[1]);
-    close(fd[0]);
-
-    int pstatus;
-    waitpid(pid1, &pstatus, 0);
-    waitpid(pid2, &pstatus, 0);
-
-    free(cmd_pipeline.cmds[1]->args);
-    free(cmd_pipeline.cmds[1]);
-  }
-
-  return 0;
 }

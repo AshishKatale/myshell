@@ -6,7 +6,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 
-#include "command.h"
+#include "pipeline.h"
 
 void shell_loop(void) {
   int exit_code = 0;
@@ -18,6 +18,7 @@ void shell_loop(void) {
 
   const char *histfile = ".mysh_history";
   read_history(histfile);
+  cmd_pipe_init();
 
   char *line;
   while (1) {
@@ -36,12 +37,15 @@ void shell_loop(void) {
       add_history(line);
 
     exit_code = command_str_parse_and_exec(line);
+    cmd_pipe_reset();
+
     if (exit_code < 0)
       break;
 
     free(line);
   }
 
+  cmd_pipe_free();
   write_history(histfile);
   clear_history();
 }
