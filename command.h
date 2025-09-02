@@ -2,7 +2,7 @@
 #define COMMAND_H 1
 #include <sys/types.h>
 
-typedef struct cmd_pipeline cmd_pipeline;
+typedef struct pipeline pipeline;
 
 typedef struct {
   char *cmd;
@@ -11,8 +11,9 @@ typedef struct {
 } command;
 
 void command_print(command *);
-command command_parse(char *, char **);
+command command_parse(char *cmd_str, char **strtok_save_ptr);
 int change_dir(command *cmd);
-pid_t command_fork_and_exec(command *, int, int, int);
+pid_t command_fork_and_exec(command *c, int fdin, int fdout, int *fds_to_close,
+                            int num_fd);
 
 #endif // !COMMAND_H

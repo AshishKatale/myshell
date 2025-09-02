@@ -65,7 +65,8 @@ int change_dir(command *cmd) {
   return 1;
 }
 
-pid_t command_fork_and_exec(command *c, int fdin, int fdout, int fd_to_close) {
+pid_t command_fork_and_exec(command *c, int fdin, int fdout, int *fds_to_close,
+                            int num_fd) {
   int pid = fork();
   if (pid == -1) {
     perror("mysh: fork failed");
@@ -75,15 +76,21 @@ pid_t command_fork_and_exec(command *c, int fdin, int fdout, int fd_to_close) {
   if (pid == 0) {
     // Child process
     if (fdin != STDIN_FILENO) {
-      dup2(fdin, STDIN_FILENO);
-      close(fdin);
+      if (dup2(fdin, STDIN_FILENO) == -1) {
+        perror("dup2 stdin failed");
+        _exit(1);
+      }
     }
     if (fdout != STDOUT_FILENO) {
-      dup2(fdout, STDOUT_FILENO);
-      close(fdout);
+      if (dup2(fdout, STDOUT_FILENO) == -1) {
+        perror("dup2 stdout failed");
+        _exit(1);
+      }
     }
-    if (fd_to_close != -1)
-      close(fd_to_close);
+
+    for (int i = 0; i < num_fd; ++i) {
+      close(fds_to_close[i]); // close all fds
+    }
 
     execvp(c->cmd, c->args);
 

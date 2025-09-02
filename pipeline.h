@@ -2,16 +2,16 @@
 #define PIPELINE_H 1
 #include "command.h"
 
-struct cmd_pipeline {
+struct pipeline {
   command *cmds;
   int ncmds;
   int ncmds_cap;
 };
 
-void cmd_pipe_init();
-void cmd_pipe_reset();
-void cmd_pipe_free();
+void pipeline_init();
+void pipeline_reset();
+void pipeline_free();
+void pipeline_parse(char *, pipeline *);
 int command_str_parse_and_exec(char *);
-void command_pipeline_parse(char *, cmd_pipeline *);
 
 #endif // !PIPELINE_H

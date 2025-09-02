@@ -18,7 +18,7 @@ void shell_loop(void) {
 
   const char *histfile = ".mysh_history";
   read_history(histfile);
-  cmd_pipe_init();
+  pipeline_init();
 
   char *line;
   while (1) {
@@ -33,11 +33,11 @@ void shell_loop(void) {
       break;
     }
 
-    if (line)
+    if (*line)
       add_history(line);
 
     exit_code = command_str_parse_and_exec(line);
-    cmd_pipe_reset();
+    pipeline_reset();
 
     if (exit_code < 0)
       break;
@@ -45,7 +45,7 @@ void shell_loop(void) {
     free(line);
   }
 
-  cmd_pipe_free();
+  pipeline_free();
   write_history(histfile);
   clear_history();
 }
