@@ -27,6 +27,7 @@ void shell_loop(void) {
 
     sprintf(prompt, "%s%s %s[%d] %s$%s ", blue, pwd,
             exit_code > 0 ? red : green, exit_code, yellow, reset);
+    free(pwd);
 
     line = readline(prompt);
     if (line == NULL) {
@@ -39,8 +40,10 @@ void shell_loop(void) {
     exit_code = command_str_parse_and_exec(line);
     pipeline_reset();
 
-    if (exit_code < 0)
+    if (exit_code < 0) {
+      free(line);
       break;
+    }
 
     free(line);
   }
