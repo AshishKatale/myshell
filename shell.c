@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <readline/history.h>
@@ -8,13 +9,23 @@
 #include "command.h"
 
 void shell_loop(void) {
-  char *line;
   int exit_code = 0;
+  char *red = "\033[1;31m";
+  char *green = "\033[0;32m";
+  char *blue = "\033[1;34m";
+  char *yellow = "\033[0;33m";
+  char *reset = "\033[0m";
 
+  const char *histfile = ".mysh_history";
+  read_history(histfile);
+
+  char *line;
   while (1) {
     char *pwd = getcwd(NULL, 0);
-    char prompt[strlen(pwd) + 10];
-    sprintf(prompt, "%s [%d] $ ", pwd, exit_code);
+    char prompt[strlen(pwd) + 32];
+
+    sprintf(prompt, "%s%s %s[%d] %s$%s ", blue, pwd,
+            exit_code > 0 ? red : green, exit_code, yellow, reset);
 
     line = readline(prompt);
     if (line == NULL) {
@@ -31,5 +42,6 @@ void shell_loop(void) {
     free(line);
   }
 
+  write_history(histfile);
   clear_history();
 }

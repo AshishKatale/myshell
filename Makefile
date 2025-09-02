@@ -3,10 +3,10 @@ LIBS = -lreadline
 SRC = $(wildcard *.c)
 
 myshell: $(SRC)
-	$(CC) -o myshell $(CFLAGS) $(LIBS) $(SRC)
+	$(CC) -o mysh $(CFLAGS) $(LIBS) $(SRC)
 
 debug: $(SRC)
-	$(CC)  -o myshell-dbg -ggdb $(LIBS) $(SRC)
+	$(CC)  -o mysh-dbg -ggdb $(LIBS) $(SRC)
 
 .PHONY: run clean
 
