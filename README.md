@@ -26,44 +26,44 @@ hello world!
 
 ```
 $ ./mysh
-/home/user/projects/shell [0] $ echo hello world!
+~/projects/shell [0] $ echo hello world!
 hello world!
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ cd ..
-/home/user/projects [0] $ 
-/home/user/projects [0] $ 
-/home/user/projects [0] $ cd
-/home/user [0] $ 
-/home/user [0] $ 
-/home/user [0] $ cd projects/shell/
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ 
-/home/user/projects [0] $ cd ~
-/home/user [0] $ 
-/home/user [0] $ 
-/home/user [0] $ cd projects/shell/
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ ls
+~/projects/shell [0] $ 
+~/projects/shell [0] $ 
+~/projects/shell [0] $ cd ..
+~/projects [0] $ 
+~/projects [0] $ 
+~/projects [0] $ cd
+~ [0] $ 
+~ [0] $ 
+~ [0] $ cd projects/shell/
+~/projects/shell [0] $ 
+~/projects/shell [0] $ 
+~/projects [0] $ cd ~
+~ [0] $ 
+~ [0] $ 
+~ [0] $ cd projects/shell/
+~/projects/shell [0] $ 
+~/projects/shell [0] $ 
+~/projects/shell [0] $ ls
 command.c  command.h  main.c  Makefile  mysh  pipeline.c  pipeline.h  README.md  shell.c  shell.h
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ ls -l | grep c$
--rw-r--r-- 1 ashish ashish  2322 Sep  3 22:20 command.c
--rw-r--r-- 1 ashish ashish   580 Sep  3 16:59 main.c
--rw-r--r-- 1 ashish ashish  3382 Sep  3 17:22 pipeline.c
--rw-r--r-- 1 ashish ashish  1736 Sep  3 22:19 shell.c
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ ls -l | grep c$ | wc -l
+~/projects/shell [0] $ 
+~/projects/shell [0] $ 
+~/projects/shell [0] $ ls -l | grep c$
+-rw-r--r-- 1 user user  2322 Sep  3 22:20 command.c
+-rw-r--r-- 1 user user   580 Sep  3 16:59 main.c
+-rw-r--r-- 1 user user  3382 Sep  3 17:22 pipeline.c
+-rw-r--r-- 1 user user  1736 Sep  3 22:19 shell.c
+~/projects/shell [0] $ 
+~/projects/shell [0] $ 
+~/projects/shell [0] $ ls -l | grep c$ | wc -l
 4
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ 
-/home/user/projects/shell [0] $ unknown-command
+~/projects/shell [0] $ 
+~/projects/shell [0] $ 
+~/projects/shell [0] $ unknown-command
 mysh: command not found: unknown-command
-/home/user/projects/shell [127] $ 
-/home/user/projects/shell [127] $ 
-/home/user/projects/shell [127] $ exit
+~/projects/shell [127] $ 
+~/projects/shell [127] $ 
+~/projects/shell [127] $ exit
 
 ```
