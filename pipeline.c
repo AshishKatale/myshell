@@ -8,26 +8,26 @@
 #include "pipeline.h"
 
 static pipeline *cmd_pipe = NULL;
-void pipeline_init() {
+void pipeline_arena_init() {
   cmd_pipe = malloc(sizeof(pipeline));
   cmd_pipe->ncmds = 0;
   cmd_pipe->ncmds_cap = 3;
   cmd_pipe->cmds = malloc(3 * sizeof(command));
 }
 
-void pipeline_free() {
+void pipeline_arena_free() {
   free(cmd_pipe->cmds);
   free(cmd_pipe);
 }
 
-void pipeline_reset() {
+void pipeline_arena_reset() {
   for (int i = 0; i < cmd_pipe->ncmds; ++i) {
     free(cmd_pipe->cmds[i].args);
   }
   cmd_pipe->ncmds = 0;
 }
 
-void pipeline_print() {
+void pipeline_cmd_print() {
   // printf("Pipe[%d/%d] [%p]:\n", cmd_pipe->ncmds, cmd_pipe->ncmds_cap,
   // cmd_pipe);
   printf("Pipe[%d]:\n", cmd_pipe->ncmds);
@@ -38,8 +38,8 @@ void pipeline_print() {
   }
 }
 
-void pipeline_parse(char *cmd_str, pipeline *pipe) {
-  pipe->ncmds = 0;
+void pipeline_cmd_parse(char *cmd_str) {
+  cmd_pipe->ncmds = 0;
 
   char *delim = "|";
   char *save_pipe = NULL, *save_cmd = NULL;
@@ -49,20 +49,20 @@ void pipeline_parse(char *cmd_str, pipeline *pipe) {
   }
 
   while (cmd_str_token != NULL) {
-    if (pipe->ncmds >= pipe->ncmds_cap) {
-      pipe->ncmds_cap += 3;
-      pipe->cmds = realloc(pipe->cmds, pipe->ncmds_cap * sizeof(command));
+    if (cmd_pipe->ncmds >= cmd_pipe->ncmds_cap) {
+      cmd_pipe->ncmds_cap += 3;
+      cmd_pipe->cmds =
+          realloc(cmd_pipe->cmds, cmd_pipe->ncmds_cap * sizeof(command));
     }
-    pipe->cmds[pipe->ncmds++] = command_parse(cmd_str_token, &save_cmd);
+    cmd_pipe->cmds[cmd_pipe->ncmds++] = command_parse(cmd_str_token, &save_cmd);
     cmd_str_token = strtok_r(NULL, delim, &save_pipe);
   }
 
   return;
 }
 
-int command_str_parse_and_exec(char *cmd_str) {
-
-  pipeline_parse(cmd_str, cmd_pipe);
+int pipeline_cmd_str_parse_and_exec(char *cmd_str) {
+  pipeline_cmd_parse(cmd_str);
   if (cmd_pipe->ncmds == 0) {
     return 0;
   }
@@ -82,17 +82,17 @@ int command_str_parse_and_exec(char *cmd_str) {
       waitpid(pid, &pstatus, 0);
     }
   } else {
-    int num_fd = (cmd_pipe->ncmds - 1) * 2;
+    int num_pipe = cmd_pipe->ncmds - 1;
+    int num_fd = num_pipe * 2;
     int fd[num_fd];
-    for (int i = 0; i < cmd_pipe->ncmds - 1; i++) {
+    for (int i = 0; i < num_pipe; i++) {
       if (pipe(fd + i * 2) == -1) {
-        perror("pipe");
+        perror("pipe creation failed");
         exit(1);
       }
     }
 
     pid_t pids[cmd_pipe->ncmds];
-
     // exec first command
     pids[0] =
         command_fork_and_exec(&cmd_pipe->cmds[0], STDIN_FILENO,
@@ -108,13 +108,12 @@ int command_str_parse_and_exec(char *cmd_str) {
     }
 
     // exec last command
-    pids[cmd_pipe->ncmds - 1] =
-        command_fork_and_exec(&cmd_pipe->cmds[cmd_pipe->ncmds - 1],
-                              fd[(cmd_pipe->ncmds - 1) * 2 -
-                                 2], // redirect last pipes write end to stdin
-                              STDOUT_FILENO, fd, num_fd);
+    pids[cmd_pipe->ncmds - 1] = command_fork_and_exec(
+        &cmd_pipe->cmds[cmd_pipe->ncmds - 1],
+        fd[(num_pipe - 1) * 2], // redirect last pipes read end to stdin
+        STDOUT_FILENO, fd, num_fd);
 
-    for (int i = 0; i < 2 * (cmd_pipe->ncmds - 1); i++) {
+    for (int i = 0; i < num_fd; i++) {
       close(fd[i]);
     }
 
