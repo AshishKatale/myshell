@@ -8,6 +8,14 @@
 
 #include "pipeline.h"
 
+int shell_cmd_exec(char *cmd_str) {
+  pipeline_arena_init();
+  int exit_code = pipeline_cmd_str_parse_and_exec(cmd_str);
+  pipeline_arena_reset();
+  pipeline_arena_free();
+  return exit_code;
+}
+
 void shell_loop(void) {
   int exit_code = 0;
   char *red = "\033[1;31m";
