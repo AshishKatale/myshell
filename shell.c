@@ -45,14 +45,19 @@ void shell_loop(void) {
     if (*line && *line != ' ')
       add_history(line);
 
-    exit_code = pipeline_cmd_str_parse_and_exec(line);
+    int ex = pipeline_cmd_str_parse_and_exec(line);
     pipeline_arena_reset();
 
-    if (exit_code < 0) {
+    if (ex == MYSH_CMD_EMPTY) {
+      continue;
+    }
+
+    if (ex == MYSH_CMD_EXIT) {
       free(line);
       break;
     }
 
+    exit_code = ex;
     free(line);
   }
 

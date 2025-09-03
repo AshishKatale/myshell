@@ -64,7 +64,7 @@ void pipeline_cmd_parse(char *cmd_str) {
 int pipeline_cmd_str_parse_and_exec(char *cmd_str) {
   pipeline_cmd_parse(cmd_str);
   if (cmd_pipe->ncmds == 0) {
-    return 0;
+    return MYSH_CMD_EMPTY;
   }
 
   int pstatus = 0;
@@ -72,10 +72,9 @@ int pipeline_cmd_str_parse_and_exec(char *cmd_str) {
   if (!is_pipeline) {
     command c = cmd_pipe->cmds[0];
     if (strcmp(c.cmd, "exit") == 0) {
-      return -1;
+      return MYSH_CMD_EXIT;
     } else if (strcmp(c.cmd, "cd") == 0) {
-      int ex = change_dir(&c);
-      return ex;
+      return change_dir(&c);
     } else {
       pid_t pid =
           command_fork_and_exec(&c, STDIN_FILENO, STDOUT_FILENO, NULL, 0);

@@ -2,6 +2,9 @@
 #define PIPELINE_H 1
 #include "command.h"
 
+#define MYSH_CMD_EXIT -1
+#define MYSH_CMD_EMPTY -2
+
 struct pipeline {
   command *cmds;
   int ncmds;
