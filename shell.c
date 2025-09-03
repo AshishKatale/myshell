@@ -34,7 +34,7 @@ void shell_loop(void) {
       break;
     }
 
-    if (*line)
+    if (*line && *line != ' ')
       add_history(line);
 
     exit_code = pipeline_cmd_str_parse_and_exec(line);
