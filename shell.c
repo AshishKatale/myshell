@@ -7,6 +7,7 @@
 #include <readline/readline.h>
 
 #include "pipeline.h"
+#include "shell.h"
 
 int shell_cmd_exec(char *cmd_str) {
   pipeline_arena_init();
@@ -16,27 +17,41 @@ int shell_cmd_exec(char *cmd_str) {
   return exit_code;
 }
 
-void shell_loop(void) {
-  int exit_code = 0;
+void generate_prompt(char *prompt, int exit_code) {
   char *red = "\033[1;31m";
   char *green = "\033[0;32m";
   char *blue = "\033[1;34m";
   char *yellow = "\033[0;33m";
   char *reset = "\033[0m";
 
+  char pwd[PATH_MAX_LEN];
+  char shorten_pwd[PATH_MAX_LEN];
+  char *home = getenv("HOME");
+
+  if (!getcwd(pwd, PATH_MAX_LEN)) {
+    strcpy(pwd, "???");
+  }
+
+  if (home && strncmp(pwd, home, strlen(home)) == 0) {
+    snprintf(shorten_pwd, PATH_MAX_LEN, "~%s", pwd + strlen(home));
+  } else {
+    strcpy(shorten_pwd, pwd);
+  }
+
+  snprintf(prompt, PROMPT_MAX_LEN, "%s%s %s[%d] %s$%s ", blue, shorten_pwd,
+           exit_code > 0 ? red : green, exit_code, yellow, reset);
+}
+
+void shell_loop(void) {
   const char *histfile = ".mysh_history";
   read_history(histfile);
   pipeline_arena_init();
 
   char *line;
+  char prompt[PROMPT_MAX_LEN];
+  int exit_code = 0;
   while (1) {
-    char *pwd = getcwd(NULL, 0);
-    char prompt[strlen(pwd) + 32];
-
-    sprintf(prompt, "%s%s %s[%d] %s$%s ", blue, pwd,
-            exit_code > 0 ? red : green, exit_code, yellow, reset);
-    free(pwd);
-
+    generate_prompt(prompt, exit_code);
     line = readline(prompt);
     if (line == NULL) {
       break;

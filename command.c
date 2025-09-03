@@ -53,7 +53,7 @@ command command_parse(char *cmd_str, char **save_ptr) {
 
 int change_dir(command *cmd) {
   char *dir = cmd->args[1];
-  if (!dir) {
+  if (!dir || strcmp(dir, "~") == 0) {
     dir = getenv("HOME");
   }
 
