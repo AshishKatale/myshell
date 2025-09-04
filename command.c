@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "command.h"
+#include "shell.h"
 
 void command_print(command *c) {
   if (!c)
@@ -51,17 +52,24 @@ command command_parse(char *cmd_str, char **save_ptr) {
   return cmd;
 }
 
-int change_dir(command *cmd) {
-  char *dir = cmd->args[1];
-  if (!dir || strcmp(dir, "~") == 0) {
-    dir = getenv("HOME");
+int command_change_dir(command *cmd) {
+  char *dir_arg = cmd->args[1];
+  char *home = getenv("HOME");
+  char cdir[PATH_MAX_LEN];
+
+  if (!dir_arg || strcmp(dir_arg, "~") == 0) {
+    snprintf(cdir, sizeof(cdir), "%s", home);
+  } else if (strncmp(dir_arg, "~/", 2) == 0) {
+    snprintf(cdir, sizeof(cdir), "%s/%s", home, dir_arg + 2);
+  } else {
+    snprintf(cdir, sizeof(cdir), "%s", dir_arg);
   }
 
-  if (chdir(dir) == 0) {
+  if (chdir(cdir) == 0) {
     return 0;
   }
 
-  fprintf(stderr, "%s: %s\n", dir, strerror(errno));
+  fprintf(stderr, "%s: %s\n", dir_arg, strerror(errno));
   return 1;
 }
 

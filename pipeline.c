@@ -39,8 +39,6 @@ void pipeline_cmd_print() {
 }
 
 void pipeline_cmd_parse(char *cmd_str) {
-  cmd_pipe->ncmds = 0;
-
   char *delim = "|";
   char *save_pipe = NULL, *save_cmd = NULL;
   char *cmd_str_token = strtok_r(cmd_str, delim, &save_pipe);
@@ -74,7 +72,7 @@ int pipeline_cmd_str_parse_and_exec(char *cmd_str) {
     if (strcmp(c.cmd, "exit") == 0) {
       return MYSH_CMD_EXIT;
     } else if (strcmp(c.cmd, "cd") == 0) {
-      return change_dir(&c);
+      return command_change_dir(&c);
     } else {
       pid_t pid =
           command_fork_and_exec(&c, STDIN_FILENO, STDOUT_FILENO, NULL, 0);

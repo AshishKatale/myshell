@@ -64,6 +64,7 @@ void shell_loop(void) {
     pipeline_arena_reset();
 
     if (ex == MYSH_CMD_EMPTY) {
+      free(line);
       continue;
     }
 

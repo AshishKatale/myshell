@@ -11,8 +11,8 @@ typedef struct {
 } command;
 
 void command_print(command *);
+int command_change_dir(command *cmd);
 command command_parse(char *cmd_str, char **strtok_save_ptr);
-int change_dir(command *cmd);
 pid_t command_fork_and_exec(command *c, int fdin, int fdout, int *fds_to_close,
                             int num_fd);
 
