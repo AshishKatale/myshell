@@ -19,14 +19,60 @@ void command_print(command *c) {
   printf("} ");
 }
 
-command command_parse(char *cmd_str, char **save_ptr) {
+char *command_next_arg(char *str, char **saveptr, int *err) {
+  char *p = str ? str : *saveptr;
+  *err = 0;
+
+  while (*p && (*p == ' ' || *p == '\t'))
+    p++;
+  if (!*p)
+    return NULL;
+
+  char *start;
+
+  if (*p == '"' || *p == '\'') {
+    char *quote = p;
+    p++;
+    start = p;
+    while (*p && *p != *quote)
+      p++;
+
+    if (*p) {
+      *p = '\0';
+      p++;
+    } else if (*p != *quote) {
+      *err = 1;
+      fprintf(stderr, "...%s\n   ^ ERROR: matching `%c` not found.\n", quote,
+              *quote);
+      return NULL;
+    }
+  } else {
+    start = p;
+    while (*p && *p != ' ' && *p != '\t')
+      p++;
+    if (*p) {
+      *p = '\0';
+      p++;
+    }
+  }
+
+  *saveptr = p;
+  return start;
+}
+
+command command_parse(char *cmd_str) {
   command cmd;
-
+  char *save_ptr;
   int nagrs = 0, args_cap = 4;
-  char **args = malloc(args_cap * sizeof(char *));
+  int err = 0;
 
-  char *delim = " \t\r\n";
-  char *cmd_token = strtok_r(cmd_str, delim, save_ptr);
+  char **args = malloc(args_cap * sizeof(char *));
+  char *cmd_token = command_next_arg(cmd_str, &save_ptr, &err);
+
+  if (err) {
+    cmd.nagrs = -1; // indicate error pasrsing args
+    return cmd;
+  }
 
   if (!cmd_token) {
     cmd.cmd = NULL;
@@ -38,13 +84,18 @@ command command_parse(char *cmd_str, char **save_ptr) {
   cmd.cmd = cmd_token;       // command name
   args[nagrs++] = cmd_token; // reuse command name as argv[0]
 
-  while (cmd_token != NULL) {
-    cmd_token = strtok_r(NULL, delim, save_ptr);
+  while (!err && cmd_token != NULL) {
+    cmd_token = command_next_arg(NULL, &save_ptr, &err);
     if (nagrs >= args_cap) {
       args_cap += 4;
       args = realloc(args, args_cap * sizeof(char *));
     }
     args[nagrs++] = cmd_token;
+  }
+
+  if (err) {
+    cmd.nagrs = -1; // indicate error pasrsing args
+    return cmd;
   }
 
   cmd.nagrs = nagrs;

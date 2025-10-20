@@ -38,12 +38,11 @@ void pipeline_cmd_print() {
   }
 }
 
-void pipeline_cmd_parse(char *cmd_str) {
+int pipeline_cmd_parse(char *cmd_str) {
   char *delim = "|";
-  char *save_pipe = NULL, *save_cmd = NULL;
-  char *cmd_str_token = strtok_r(cmd_str, delim, &save_pipe);
+  char *cmd_str_token = strtok(cmd_str, delim);
   if (!cmd_str_token) {
-    return;
+    return 0;
   }
 
   while (cmd_str_token != NULL) {
@@ -52,15 +51,25 @@ void pipeline_cmd_parse(char *cmd_str) {
       cmd_pipe->cmds =
           realloc(cmd_pipe->cmds, cmd_pipe->ncmds_cap * sizeof(command));
     }
-    cmd_pipe->cmds[cmd_pipe->ncmds++] = command_parse(cmd_str_token, &save_cmd);
-    cmd_str_token = strtok_r(NULL, delim, &save_pipe);
+
+    command cmd = command_parse(cmd_str_token);
+    if (cmd.nagrs < 0) {
+      return 1;
+    }
+
+    cmd_pipe->cmds[cmd_pipe->ncmds++] = cmd;
+    cmd_str_token = strtok(NULL, delim);
   }
 
-  return;
+  return 0;
 }
 
 int pipeline_cmd_str_parse_and_exec(char *cmd_str) {
-  pipeline_cmd_parse(cmd_str);
+  int err = pipeline_cmd_parse(cmd_str);
+  if (err) {
+    return 1;
+  }
+
   if (cmd_pipe->ncmds == 0) {
     return MYSH_CMD_EMPTY;
   }
