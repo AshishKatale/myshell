@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,7 +43,26 @@ void generate_prompt(char *prompt, int exit_code) {
            exit_code > 0 ? red : green, exit_code, yellow, reset);
 }
 
+void handle_sigint(int sig) {
+  pipeline_handle_sigint(sig);
+  printf("\n");           // newline like bash
+  rl_replace_line("", 0); // clear readline buffer
+  rl_on_new_line();       // move to new line
+  rl_redisplay();
+}
+
 void shell_loop(void) {
+
+  struct sigaction sa;
+  sa.sa_handler = handle_sigint;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = 0;
+
+  if (sigaction(SIGINT, &sa, NULL) == -1) {
+    perror("sigaction");
+    exit(1);
+  }
+
   const char *histfile = "/tmp/.mysh_history";
   read_history(histfile);
   pipeline_arena_init();

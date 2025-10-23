@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,10 +9,12 @@
 #include "pipeline.h"
 
 static pipeline *cmd_pipe = NULL;
+static pid_t *cmd_pids = NULL;
 void pipeline_arena_init() {
   cmd_pipe = malloc(sizeof(pipeline));
   cmd_pipe->ncmds = 0;
   cmd_pipe->ncmds_cap = 3;
+  cmd_pipe->command_running = 0;
   cmd_pipe->cmds = malloc(3 * sizeof(command));
 }
 
@@ -20,11 +23,34 @@ void pipeline_arena_free() {
   free(cmd_pipe);
 }
 
+void pipeline_handle_sigint(int sig) {
+  (void)sig;
+
+  if (!cmd_pipe->command_running)
+    return;
+
+  for (int i = 0; i < cmd_pipe->ncmds; i++) {
+    if (cmd_pids[i] > 0) {
+      kill(cmd_pids[i], SIGTERM);
+    }
+  }
+
+  // wait to clean up zombies
+  for (int i = 0; i < cmd_pipe->ncmds; i++) {
+    if (cmd_pids[i] > 0) {
+      waitpid(cmd_pids[i], NULL, 0);
+    }
+  }
+
+  cmd_pipe->command_running = 0;
+}
+
 void pipeline_arena_reset() {
   for (int i = 0; i < cmd_pipe->ncmds; ++i) {
     free(cmd_pipe->cmds[i].args);
   }
   cmd_pipe->ncmds = 0;
+  cmd_pipe->command_running = 0;
 }
 
 void pipeline_cmd_print() {
@@ -76,6 +102,7 @@ int pipeline_cmd_str_parse_and_exec(char *cmd_str) {
 
   int pstatus = 0;
   int is_pipeline = cmd_pipe->ncmds > 1;
+  cmd_pipe->command_running = 1;
   if (!is_pipeline) {
     command c = cmd_pipe->cmds[0];
     if (strcmp(c.cmd, "exit") == 0) {
@@ -99,6 +126,7 @@ int pipeline_cmd_str_parse_and_exec(char *cmd_str) {
     }
 
     pid_t pids[cmd_pipe->ncmds];
+    cmd_pids = pids;
     // exec first command
     pids[0] =
         command_fork_and_exec(&cmd_pipe->cmds[0], STDIN_FILENO,
