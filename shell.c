@@ -43,7 +43,7 @@ void generate_prompt(char *prompt, int exit_code) {
 }
 
 void shell_loop(void) {
-  const char *histfile = ".mysh_history";
+  const char *histfile = "/tmp/.mysh_history";
   read_history(histfile);
   pipeline_arena_init();
 
