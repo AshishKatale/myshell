@@ -15,7 +15,7 @@ struct pipeline {
 void pipeline_arena_init(void);
 void pipeline_arena_reset(void);
 void pipeline_arena_free(void);
-void pipeline_handle_sigint(int sig);
+int pipeline_handle_sigint();
 int pipeline_cmd_parse(char *cmd_str);
 int pipeline_cmd_str_parse_and_exec(char *cmd_str);
 

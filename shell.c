@@ -44,10 +44,13 @@ void generate_prompt(char *prompt, int exit_code) {
 }
 
 void handle_sigint(int sig) {
-  pipeline_handle_sigint(sig);
-  printf("\n");           // newline like bash
-  rl_replace_line("", 0); // clear readline buffer
-  rl_on_new_line();       // move to new line
+  (void)sig;
+  int kills = pipeline_handle_sigint();
+  printf("\n"); // newline like bash
+  if (kills == 0) {
+    rl_replace_line("", 0); // clear readline buffer
+    rl_on_new_line();       // move to new line
+  }
   rl_redisplay();
 }
 
@@ -74,6 +77,7 @@ void shell_loop(void) {
     generate_prompt(prompt, exit_code);
     line = readline(prompt);
     if (line == NULL) {
+      printf("exit\n");
       break;
     }
 

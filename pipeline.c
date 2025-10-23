@@ -23,11 +23,9 @@ void pipeline_arena_free() {
   free(cmd_pipe);
 }
 
-void pipeline_handle_sigint(int sig) {
-  (void)sig;
-
+int pipeline_handle_sigint() {
   if (!cmd_pipe->command_running)
-    return;
+    return 0;
 
   for (int i = 0; i < cmd_pipe->ncmds; i++) {
     if (cmd_pids[i] > 0) {
@@ -43,6 +41,7 @@ void pipeline_handle_sigint(int sig) {
   }
 
   cmd_pipe->command_running = 0;
+  return cmd_pipe->ncmds;
 }
 
 void pipeline_arena_reset() {
@@ -112,6 +111,7 @@ int pipeline_cmd_str_parse_and_exec(char *cmd_str) {
     } else {
       pid_t pid =
           command_fork_and_exec(&c, STDIN_FILENO, STDOUT_FILENO, NULL, 0);
+      cmd_pids = &pid;
       waitpid(pid, &pstatus, 0);
     }
   } else {
